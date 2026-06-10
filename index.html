@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>💰 나의 재무컨설턴트 — 10년 10억 프로젝트</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1320">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="재무컨설턴트">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  :root{
+    --bg:#0f1320; --card:#1a2035; --card2:#212945; --line:#2e3858;
+    --txt:#e8ecf8; --sub:#93a0c2; --gold:#f5c542; --green:#3ddc84;
+    --red:#ff6b6b; --blue:#5b9cff; --purple:#a78bfa;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Malgun Gothic',sans-serif}
+  body{background:var(--bg);color:var(--txt);min-height:100vh;
+    padding:env(safe-area-inset-top) 0 calc(60px + env(safe-area-inset-bottom))}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px}
+
+  header{text-align:center;padding:28px 0 10px}
+  header h1{font-size:26px;letter-spacing:-0.5px}
+  header h1 span{color:var(--gold)}
+  header p{color:var(--sub);margin-top:6px;font-size:14px}
+
+  /* 알림 배너 */
+  .banner{display:none;background:linear-gradient(90deg,#3a2d10,#2a2210);border:1px solid #6b5518;
+    border-radius:12px;padding:13px 16px;margin:14px 0 0;font-size:14px;line-height:1.6}
+  .banner.show{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .banner b{color:var(--gold)}
+  .banner button{margin:0;padding:8px 14px;font-size:13px}
+
+  /* 목표 진행 카드 */
+  .goal-card{background:linear-gradient(135deg,#1e2647,#171c33);border:1px solid var(--line);
+    border-radius:18px;padding:24px;margin:18px 0}
+  .goal-top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:baseline}
+  .goal-top .big{font-size:32px;font-weight:800;color:var(--gold)}
+  .goal-top .dday{font-size:15px;color:var(--sub)}
+  .goal-top .dday b{color:var(--blue);font-size:18px}
+  .bar{height:18px;background:#0c101e;border-radius:10px;margin:14px 0 8px;overflow:hidden;position:relative}
+  .bar-fill{height:100%;background:linear-gradient(90deg,#f5c542,#3ddc84);border-radius:10px;
+    transition:width .8s ease;min-width:2px}
+  .bar-label{display:flex;justify-content:space-between;font-size:13px;color:var(--sub)}
+  .goal-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+  .gs{background:#141a2e;border-radius:12px;padding:12px 14px}
+  .gs .l{font-size:12px;color:var(--sub)}
+  .gs .v{font-size:17px;font-weight:700;margin-top:4px}
+
+  /* 탭 */
+  .tabs{display:flex;gap:6px;margin:10px 0 18px;flex-wrap:wrap}
+  .tab{flex:1;min-width:105px;text-align:center;padding:12px 8px;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;cursor:pointer;font-size:14px;
+    color:var(--sub);transition:.2s;user-select:none}
+  .tab:hover{border-color:var(--blue)}
+  .tab.on{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+  .page{display:none}
+  .page.on{display:block;animation:fade .3s}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+  .card h2{font-size:17px;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+
+  /* 폼 */
+  label{display:block;font-size:13px;color:var(--sub);margin:10px 0 4px}
+  input,select{width:100%;padding:10px 12px;background:#10152a;border:1px solid var(--line);
+    border-radius:10px;color:var(--txt);font-size:15px;outline:none}
+  input:focus,select:focus{border-color:var(--blue)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:120px}
+  button{padding:11px 18px;background:var(--blue);color:#fff;border:none;border-radius:10px;
+    font-size:14px;font-weight:700;cursor:pointer;transition:.2s;margin-top:12px}
+  button:hover{filter:brightness(1.15)}
+  button:disabled{opacity:.5;cursor:wait}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--sub)}
+  button.gold{background:var(--gold);color:#1a1a1a}
+  button.danger{background:transparent;border:1px solid #5a2a35;color:var(--red);padding:6px 10px;margin:0;font-size:12px}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;color:var(--sub);font-weight:600;font-size:12px;padding:8px;border-bottom:1px solid var(--line)}
+  td{padding:9px 8px;border-bottom:1px solid #232b48}
+  td.num,th.num{text-align:right}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+  .tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+  .tag.cash{background:#1d3a2a;color:var(--green)} .tag.stock{background:#1d2c4d;color:var(--blue)}
+  .tag.fund{background:#3a2d4d;color:var(--purple)} .tag.estate{background:#4d3a1d;color:var(--gold)}
+  .tag.etc{background:#333a4d;color:var(--sub)}
+  .tk-sub{font-size:11px;color:var(--blue)}
+
+  .advice{background:linear-gradient(135deg,#1d2742,#1a2035);border-left:4px solid var(--gold);
+    border-radius:12px;padding:16px 18px;margin-bottom:14px;line-height:1.7;font-size:14px}
+  .advice b{color:var(--gold)}
+  .advice .phase{font-size:16px;font-weight:800;color:var(--green);margin-bottom:6px}
+
+  .stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:12px}
+  .stock{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .stock .nm{font-weight:800;font-size:15px}
+  .stock .tk{color:var(--blue);font-size:12px;margin-left:6px}
+  .stock .yd{color:var(--gold);font-size:13px;margin:6px 0;font-weight:700}
+  .stock .ds{color:var(--sub);font-size:12.5px;line-height:1.55}
+
+  /* 배당 캘린더 */
+  .cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+  .cal-m{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px;min-height:90px}
+  .cal-m.now{border-color:var(--gold)}
+  .cal-m .mh{font-weight:800;font-size:14px;margin-bottom:6px}
+  .cal-m .mt{font-size:16px;font-weight:800;color:var(--green);margin-bottom:6px}
+  .cal-m .mi{font-size:11.5px;color:var(--sub);line-height:1.6}
+  .cal-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+
+  canvas{width:100%;background:#10152a;border-radius:12px;margin-top:10px}
+  .note{font-size:12px;color:var(--sub);margin-top:10px;line-height:1.6}
+  .empty{text-align:center;color:var(--sub);padding:24px;font-size:14px}
+  .slider-row{display:flex;align-items:center;gap:12px;margin:8px 0}
+  .slider-row input[type=range]{flex:1;padding:0}
+  .slider-row .sv{min-width:64px;text-align:right;font-weight:700;color:var(--gold)}
+  .dividend-big{text-align:center;padding:18px;background:#141a2e;border-radius:14px;margin-top:12px}
+  .dividend-big .m{font-size:30px;font-weight:800;color:var(--green)}
+  .dividend-big .s{font-size:13px;color:var(--sub);margin-top:4px}
+  .status{font-size:13px;color:var(--gold);margin-top:8px;min-height:18px}
+  details{margin-top:8px}
+  summary{font-size:13px;color:var(--sub);cursor:pointer}
+  .guide{line-height:1.9;font-size:14px}
+  .guide b{color:var(--gold)}
+  .guide .step{background:#141a2e;border-radius:10px;padding:10px 14px;margin:8px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>💰 나의 재무컨설턴트 <span>— 10년 10억 프로젝트</span></h1>
+    <p>자산을 기록하면, 목표 달성 전략과 투자 방향을 제안해 드립니다</p>
+  </header>
+
+  <!-- 월간 업데이트 알림 배너 -->
+  <div class="banner" id="banner">
+    <span>📌 <b id="bannerMsg"></b></span>
+    <button class="gold" onclick="goAssetTab()">지금 업데이트하기 →</button>
+  </div>
+
+  <!-- 목표 진행 현황 -->
+  <div class="goal-card">
+    <div class="goal-top">
+      <div><div style="font-size:13px;color:var(--sub)">현재 총자산</div><div class="big" id="gTotal">0원</div></div>
+      <div class="dday">목표일까지 <b id="gDday">-</b></div>
+    </div>
+    <div class="bar"><div class="bar-fill" id="gBar" style="width:0%"></div></div>
+    <div class="bar-label"><span id="gPct">0%</span><span id="gTarget">목표 10억</span></div>
+    <div class="goal-stats">
+      <div class="gs"><div class="l">남은 금액</div><div class="v" id="gRemain">-</div></div>
+      <div class="gs"><div class="l">월 평균 저축액 (최근 가계부)</div><div class="v" id="gSaving">-</div></div>
+      <div class="gs"><div class="l">목표 달성 필요 수익률 (연)</div><div class="v" id="gNeedReturn">-</div></div>
+      <div class="gs"><div class="l">보유자산 연 예상 배당 (세후)</div><div class="v" id="gDiv">-</div></div>
+    </div>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <div class="tab on" data-p="dash">📊 대시보드</div>
+    <div class="tab" data-p="asset">💼 자산 관리</div>
+    <div class="tab" data-p="ledger">🧾 가계부</div>
+    <div class="tab" data-p="strategy">🧭 투자 전략</div>
+    <div class="tab" data-p="cal">📅 배당 캘린더</div>
+    <div class="tab" data-p="dividend">🏖️ 배당 시뮬</div>
+    <div class="tab" data-p="setting">⚙️ 설정</div>
+  </div>
+
+  <!-- ── 대시보드 ── -->
+  <div class="page on" id="p-dash">
+    <div class="card">
+      <h2>📈 자산 성장 시나리오 (목표선 vs 예상 경로)</h2>
+      <canvas id="chart" height="320"></canvas>
+      <div class="note" id="chartNote"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>🎯 수익률별 10년 후 예상 자산</h2>
+        <table><thead><tr><th>연 수익률</th><th class="num">10년 후 자산</th><th class="num">목표 대비</th></tr></thead>
+        <tbody id="scenarioBody"></tbody></table>
+        <div class="note">현재 자산 + 월 저축액 기준 복리 계산 (월복리)</div>
+      </div>
+      <div class="card">
+        <h2>💡 오늘의 컨설팅 요약</h2>
+        <div id="dashAdvice"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 자산 관리 ── -->
+  <div class="page" id="p-asset">
+    <div class="grid2">
+      <div class="card">
+        <h2>➕ 자산 추가 / 수정</h2>
+        <label>자산 이름</label>
+        <input id="aName" placeholder="예: 삼성전자, SCHD, KB국민은행 예금">
+        <div class="row">
+          <div><label>분류</label>
+            <select id="aCat">
+              <option value="cash">현금/예금</option>
+              <option value="stock" selected>주식/ETF</option>
+              <option value="fund">펀드/연금</option>
+              <option value="estate">부동산</option>
+              <option value="etc">기타</option>
+            </select></div>
+          <div><label>평가 금액 (원)</label><input id="aAmt" type="number" placeholder="비워두면 시세로 자동계산"></div>
+        </div>
+        <div class="row">
+          <div><label>티커/종목코드 (선택)</label><input id="aTicker" placeholder="예: SCHD, 005930, JEPI"></div>
+          <div><label>보유 수량 (선택)</label><input id="aShares" type="number" step="any" placeholder="예: 120"></div>
+        </div>
+        <details>
+          <summary>배당 정보 직접 입력 (예금이자·비상장 등)</summary>
+          <div class="row">
+            <div><label>연 배당률/이자율 (%)</label><input id="aYield" type="number" step="0.1" placeholder="자동조회 시 비워두기"></div>
+            <div><label>지급월 (쉼표 구분)</label><input id="aPayM" placeholder="예: 3,6,9,12 (매월은 전체)"></div>
+          </div>
+        </details>
+        <button onclick="addAsset()" id="addBtn">자산 추가</button>
+        <div class="status" id="aStatus"></div>
+        <div class="note">티커와 수량을 입력하면 <b style="color:var(--gold)">현재가·배당률·지급월을 자동 조회</b>합니다. 한국 종목은 6자리 코드(예: 삼성전자 005930), 미국은 티커(예: SCHD). 미국 주식은 환율을 적용해 원화로 환산합니다.</div>
+      </div>
+      <div class="card">
+        <h2>🥧 자산 구성</h2>
+        <canvas id="pie" height="240"></canvas>
+        <div class="note" id="pieNote"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>💼 보유 자산 목록 <button class="ghost" style="margin:0 0 0 auto" onclick="refreshAll()" id="refBtn">🔄 전체 시세 갱신</button></h2>
+      <div class="status" id="refStatus"></div>
+      <table><thead><tr><th>자산</th><th>분류</th><th class="num">배당률</th><th class="num">평가액</th><th class="num">비중</th><th></th></tr></thead>
+      <tbody id="assetBody"></tbody></table>
+      <div class="empty" id="assetEmpty">아직 등록된 자산이 없습니다. 위에서 자산을 추가해 보세요!</div>
+      <div class="note" id="lastUpdNote"></div>
+    </div>
+  </div>
+
+  <!-- ── 가계부 ── -->
+  <div class="page" id="p-ledger">
+    <div class="card">
+      <h2>🧾 월간 수입·지출 기록</h2>
+      <div class="row">
+        <div><label>연월</label><input id="lMonth" type="month"></div>
+        <div><label>수입 (원)</label><input id="lIncome" type="number" placeholder="3000000"></div>
+        <div><label>지출 (원)</label><input id="lExpense" type="number" placeholder="2000000"></div>
+      </div>
+      <button onclick="addLedger()">기록 저장</button>
+      <div class="note">같은 달을 다시 저장하면 덮어씁니다. <b style="color:var(--green)">수입 − 지출 = 투자 가능액</b>으로 자동 계산되어 목표 시뮬레이션에 반영됩니다.</div>
+    </div>
+    <div class="card">
+      <h2>📅 월별 기록</h2>
+      <table><thead><tr><th>연월</th><th class="num">수입</th><th class="num">지출</th><th class="num">저축(투자)액</th><th class="num">저축률</th><th></th></tr></thead>
+      <tbody id="ledgerBody"></tbody></table>
+      <div class="empty" id="ledgerEmpty">기록이 없습니다. 이번 달 수입과 지출을 입력해 보세요!</div>
+      <div class="note" id="ledgerAdvice"></div>
+    </div>
+  </div>
+
+  <!-- ── 투자 전략 ── -->
+  <div class="page" id="p-strategy">
+    <div id="strategyBox"></div>
+    <div class="card">
+      <h2>⭐ 단계별 추천 종목 / ETF</h2>
+      <div id="stockBox" class="stock-grid"></div>
+      <div class="note">⚠️ 배당률·가격은 시장 상황에 따라 변동됩니다. 본 추천은 일반적인 배당 투자 교과서 기준의 참고용이며, 매수 전 최신 시세와 공시를 꼭 확인하세요. 투자의 최종 책임은 본인에게 있습니다.</div>
+    </div>
+  </div>
+
+  <!-- ── 배당 캘린더 ── -->
+  <div class="page" id="p-cal">
+    <div class="card">
+      <h2>📅 내 보유자산 배당 캘린더</h2>
+      <div class="cal-sum">
+        <div class="gs"><div class="l">연 예상 배당금 (세전)</div><div class="v" id="calYear">-</div></div>
+        <div class="gs"><div class="l">연 예상 배당금 (세후)</div><div class="v" id="calYearAfter">-</div></div>
+        <div class="gs"><div class="l">월 평균 (세후)</div><div class="v" id="calMonthly">-</div></div>
+        <div class="gs"><div class="l">포트폴리오 평균 배당률</div><div class="v" id="calAvgYield">-</div></div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="empty" id="calEmpty">배당 정보가 있는 자산이 없습니다.<br>자산 관리 탭에서 티커를 입력해 시세를 갱신하거나, 배당률을 직접 입력해 보세요.</div>
+      <div class="note">금액은 세전 기준이며, 지급월은 최근 1년 배당 이력 기준입니다. 지급월 정보가 없는 자산은 12개월로 나눠 표시됩니다(✳ 표시).</div>
+    </div>
+  </div>
+
+  <!-- ── 배당 시뮬레이션 ── -->
+  <div class="page" id="p-dividend">
+    <div class="card">
+      <h2>🏖️ 배당금 생활 시뮬레이터</h2>
+      <label>시뮬레이션 자산 규모</label>
+      <div class="slider-row">
+        <input type="range" id="dAsset" min="1" max="30" step="0.5" value="10">
+        <div class="sv" id="dAssetV">10억</div>
+      </div>
+      <label>평균 배당수익률 (연)</label>
+      <div class="slider-row">
+        <input type="range" id="dYield" min="2" max="9" step="0.1" value="4">
+        <div class="sv" id="dYieldV">4.0%</div>
+      </div>
+      <div class="grid2">
+        <div class="dividend-big"><div class="m" id="dMonthly">-</div><div class="s">월 배당금 (세후 15.4% 공제)</div></div>
+        <div class="dividend-big"><div class="m" id="dYearly">-</div><div class="s">연 배당금 (세전)</div></div>
+      </div>
+      <div class="note" id="dNote"></div>
+    </div>
+    <div class="card">
+      <h2>📐 목표 월 배당금으로 역산하기</h2>
+      <div class="row">
+        <div><label>원하는 월 배당금 (세후, 원)</label><input id="dWant" type="number" value="3000000"></div>
+        <div><label>배당수익률 (%)</label><input id="dWantYield" type="number" value="4" step="0.1"></div>
+      </div>
+      <button onclick="calcReverse()">필요 자산 계산</button>
+      <div class="dividend-big" style="display:none" id="dReverseBox">
+        <div class="m" id="dReverse">-</div><div class="s">필요한 투자 원금</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 설정 ── -->
+  <div class="page" id="p-setting">
+    <div class="card">
+      <h2>⚙️ 목표 설정</h2>
+      <div class="row">
+        <div><label>목표 금액 (원)</label><input id="sTarget" type="number"></div>
+        <div><label>목표 달성일</label><input id="sDate" type="date"></div>
+      </div>
+      <label>예상 연 수익률 (%) — 시나리오 기본값</label>
+      <input id="sReturn" type="number" step="0.5">
+      <button onclick="saveSettings()">설정 저장</button>
+    </div>
+    <div class="card">
+      <h2>💾 데이터 백업 / 복원</h2>
+      <button class="ghost" onclick="exportData()">📤 백업 파일 다운로드 (JSON)</button>
+      <button class="ghost" onclick="document.getElementById('importFile').click()">📥 백업 파일 불러오기</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      <div class="note">데이터는 이 브라우저(기기)에 저장됩니다. PC↔아이폰 간 데이터 이동도 이 백업/복원 기능을 사용하세요.</div>
+    </div>
+    <div class="card">
+      <h2>📱 아이폰 홈 화면에 설치하기</h2>
+      <div class="guide">
+        <div class="step">① 아이폰 <b>Safari</b>로 이 앱 주소에 접속</div>
+        <div class="step">② 하단 가운데 <b>공유 버튼(⬆️)</b> 탭</div>
+        <div class="step">③ <b>"홈 화면에 추가"</b> 선택 → 추가</div>
+        <div class="step">④ 홈 화면의 💰 아이콘으로 실행 — 전체화면 앱처럼 동작!</div>
+      </div>
+      <div class="note">인터넷에 올려둔 주소(GitHub Pages 등)로 설치하면 오프라인에서도 열립니다. 같은 Wi-Fi의 PC 주소로 설치한 경우 PC가 켜져 있어야 합니다.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ──────────────── 데이터 ──────────────── */
+const KEY='myFinanceConsultant_v1';
+let DB = load();
+function load(){
+  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d){ d.lastUpdate=d.lastUpdate||''; return d; } }catch(e){}
+  const dt = new Date(); dt.setFullYear(dt.getFullYear()+10);
+  return { target:1000000000, targetDate:dt.toISOString().slice(0,10), expReturn:7, assets:[], ledger:[], lastUpdate:'' };
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(DB)); }
+
+const CAT={cash:'현금/예금',stock:'주식/ETF',fund:'펀드/연금',estate:'부동산',etc:'기타'};
+const fmt=n=>{ n=Math.round(n);
+  if(Math.abs(n)>=100000000){ const eok=Math.floor(n/100000000), rest=Math.round((n%100000000)/10000);
+    return rest>0? `${eok}억 ${rest.toLocaleString()}만원` : `${eok}억원`; }
+  if(Math.abs(n)>=10000) return `${Math.round(n/10000).toLocaleString()}만원`;
+  return n.toLocaleString()+'원'; };
+const fmtFull=n=>Math.round(n).toLocaleString()+'원';
+const thisMonth=()=>new Date().toISOString().slice(0,7);
+
+/* ──────────────── 계산 ──────────────── */
+function totalAssets(){ return DB.assets.reduce((s,a)=>s+a.amt,0); }
+function monthsLeft(){
+  const d=(new Date(DB.targetDate)-new Date())/86400000;
+  return Math.max(1, Math.round(d/30.44));
+}
+function avgSaving(){
+  const arr=[...DB.ledger].sort((a,b)=>b.month.localeCompare(a.month)).slice(0,6);
+  if(!arr.length) return 0;
+  return arr.reduce((s,l)=>s+(l.income-l.expense),0)/arr.length;
+}
+function futureValue(P, pmt, annual, months){
+  const i=Math.pow(1+annual/100,1/12)-1;
+  if(i===0) return P+pmt*months;
+  return P*Math.pow(1+i,months)+pmt*((Math.pow(1+i,months)-1)/i);
+}
+function requiredReturn(P, pmt, target, months){
+  if(futureValue(P,pmt,0,months)>=target) return 0;
+  let lo=0, hi=60;
+  if(futureValue(P,pmt,hi,months)<target) return null;
+  for(let k=0;k<60;k++){ const mid=(lo+hi)/2;
+    futureValue(P,pmt,mid,months)<target? lo=mid : hi=mid; }
+  return (lo+hi)/2;
+}
+function portfolioDividend(){ // 세전 연 배당금 합계
+  return DB.assets.reduce((s,a)=>s+(a.yield>0? a.amt*a.yield/100 : 0),0);
+}
+
+/* ──────────────── 실시간 시세 조회 (Yahoo Finance + CORS 프록시) ──────────────── */
+const PROXIES=[
+  u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`
+];
+async function yget(url){
+  let lastErr;
+  for(const p of PROXIES){
+    try{
+      const r=await fetch(p(url),{signal:AbortSignal.timeout(12000)});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return await r.json();
+    }catch(e){ lastErr=e; }
+  }
+  throw lastErr||new Error('조회 실패');
+}
+async function fetchQuote(tk){
+  tk=tk.trim();
+  const cands=/^\d{6}$/.test(tk)? [tk+'.KS',tk+'.KQ'] : [tk.toUpperCase()];
+  for(const c of cands){
+    try{
+      const j=await yget(`https://query1.finance.yahoo.com/v8/finance/chart/${c}?range=1y&interval=1mo&events=div`);
+      const res=j.chart&&j.chart.result&&j.chart.result[0];
+      if(!res||!res.meta||!res.meta.regularMarketPrice) continue;
+      const price=res.meta.regularMarketPrice, currency=res.meta.currency||'KRW';
+      let divSum=0; const months=new Set();
+      const evs=res.events&&res.events.dividends;
+      if(evs) Object.values(evs).forEach(d=>{
+        divSum+=d.amount; months.add(new Date(d.date*1000).getMonth()+1); });
+      return { symbol:c, price, currency,
+        yield: divSum>0? divSum/price*100 : 0,
+        payMonths:[...months].sort((a,b)=>a-b) };
+    }catch(e){}
+  }
+  return null;
+}
+let FX=null; // USD/KRW 캐시
+async function getFx(){
+  if(FX) return FX;
+  const q=await fetchQuote('USDKRW=X');
+  FX=q? q.price : 1350; // 조회 실패 시 보수적 기본값
+  return FX;
+}
+async function applyQuote(a){
+  if(!a.ticker||!a.shares) return false;
+  const q=await fetchQuote(a.ticker);
+  if(!q) return false;
+  let fx=1;
+  if(q.currency==='USD') fx=await getFx();
+  a.amt=Math.round(q.price*a.shares*fx);
+  a.lastPrice=q.price; a.currency=q.currency;
+  if(q.yield>0){ a.yield=+q.yield.toFixed(2); a.payMonths=q.payMonths; }
+  return true;
+}
+async function refreshAll(){
+  const btn=document.getElementById('refBtn'), st=document.getElementById('refStatus');
+  const targets=DB.assets.filter(a=>a.ticker&&a.shares);
+  if(!targets.length){ st.textContent='티커·수량이 입력된 자산이 없습니다.'; return; }
+  btn.disabled=true; let ok=0,fail=[];
+  for(const a of targets){
+    st.textContent=`🔄 ${a.name} 시세 조회 중... (${ok+fail.length+1}/${targets.length})`;
+    (await applyQuote(a))? ok++ : fail.push(a.name);
+  }
+  DB.lastUpdate=thisMonth(); save(); renderAll();
+  document.getElementById('refStatus').textContent =
+    `✅ ${ok}개 갱신 완료` + (fail.length? ` / ⚠️ 실패: ${fail.join(', ')} (잠시 후 다시 시도해 보세요)`:'');
+  btn.disabled=false;
+}
+
+/* ──────────────── 렌더링 ──────────────── */
+function renderBanner(){
+  const b=document.getElementById('banner');
+  const need = DB.assets.length>0 && DB.lastUpdate!==thisMonth();
+  b.classList.toggle('show', need);
+  if(need){
+    const [y,m]=thisMonth().split('-');
+    document.getElementById('bannerMsg').textContent=`${+m}월 자산 업데이트가 아직 안 됐어요! 평가액을 갱신하면 시뮬레이션이 정확해집니다.`;
+  }
+}
+function goAssetTab(){ document.querySelector('[data-p="asset"]').click(); refreshAll(); }
+
+function renderGoal(){
+  const T=totalAssets(), tgt=DB.target, m=monthsLeft(), sv=avgSaving();
+  const pct=Math.min(100, T/tgt*100);
+  document.getElementById('gTotal').textContent=fmt(T);
+  document.getElementById('gBar').style.width=pct+'%';
+  document.getElementById('gPct').textContent=pct.toFixed(1)+'% 달성';
+  document.getElementById('gTarget').textContent='목표 '+fmt(tgt);
+  document.getElementById('gRemain').textContent=fmt(Math.max(0,tgt-T));
+  const days=Math.max(0,Math.round((new Date(DB.targetDate)-new Date())/86400000));
+  document.getElementById('gDday').textContent=`D-${days.toLocaleString()} (약 ${(m/12).toFixed(1)}년)`;
+  document.getElementById('gSaving').textContent= sv>0? fmt(sv) : '가계부 입력 필요';
+  const rr=requiredReturn(T,sv,tgt,m);
+  document.getElementById('gNeedReturn').textContent =
+    T>=tgt? '🎉 목표 달성!' : rr===null? '저축액 증액 필요' : rr<=0.01? '저축만으로 가능' : `연 ${rr.toFixed(1)}%`;
+  const pd=portfolioDividend();
+  document.getElementById('gDiv').textContent = pd>0? fmt(pd*(1-0.154)) : '배당자산 없음';
+}
+
+function renderScenarios(){
+  const T=totalAssets(), sv=avgSaving(), m=monthsLeft(), tgt=DB.target;
+  const rows=[3,5,7,10,12].map(r=>{
+    const fv=futureValue(T,sv,r,m); const ok=fv>=tgt;
+    return `<tr><td>연 ${r}%</td><td class="num">${fmt(fv)}</td>
+      <td class="num ${ok?'pos':'neg'}">${ok?'✅ 달성':'△ '+fmt(fv-tgt)}</td></tr>`;
+  }).join('');
+  document.getElementById('scenarioBody').innerHTML=rows;
+}
+
+function renderAssets(){
+  const T=totalAssets();
+  const body=document.getElementById('assetBody');
+  body.innerHTML=DB.assets.map((a,i)=>`<tr>
+    <td><b>${a.name}</b>${a.ticker?` <span class="tk-sub">${a.ticker}${a.shares?' ×'+a.shares:''}</span>`:''}</td>
+    <td><span class="tag ${a.cat}">${CAT[a.cat]}</span></td>
+    <td class="num">${a.yield>0? '<span class="pos">'+a.yield.toFixed(1)+'%</span>':'-'}</td>
+    <td class="num">${fmtFull(a.amt)}</td>
+    <td class="num">${T?(a.amt/T*100).toFixed(1):0}%</td>
+    <td style="text-align:right"><button class="danger" onclick="delAsset(${i})">삭제</button></td></tr>`).join('');
+  document.getElementById('assetEmpty').style.display=DB.assets.length?'none':'block';
+  document.getElementById('lastUpdNote').textContent = DB.lastUpdate? `마지막 업데이트: ${DB.lastUpdate}` : '';
+  drawPie();
+}
+
+function renderLedger(){
+  const arr=[...DB.ledger].sort((a,b)=>b.month.localeCompare(a.month));
+  document.getElementById('ledgerBody').innerHTML=arr.map(l=>{
+    const sv=l.income-l.expense, rate=l.income? (sv/l.income*100):0;
+    const i=DB.ledger.indexOf(l);
+    return `<tr><td><b>${l.month}</b></td>
+      <td class="num pos">+${fmtFull(l.income)}</td>
+      <td class="num neg">-${fmtFull(l.expense)}</td>
+      <td class="num ${sv>=0?'pos':'neg'}">${fmtFull(sv)}</td>
+      <td class="num">${rate.toFixed(0)}%</td>
+      <td style="text-align:right"><button class="danger" onclick="delLedger(${i})">삭제</button></td></tr>`;
+  }).join('');
+  document.getElementById('ledgerEmpty').style.display=DB.ledger.length?'none':'block';
+  const adv=document.getElementById('ledgerAdvice');
+  if(DB.ledger.length){
+    const sv=avgSaving();
+    const last=arr[0]; const rate=last.income?((last.income-last.expense)/last.income*100):0;
+    let msg=`최근 6개월 평균 저축액은 <b style="color:var(--gold)">${fmt(sv)}</b>입니다. `;
+    if(rate>=50) msg+='저축률 50% 이상, 아주 훌륭합니다! 💪 이 페이스를 유지하세요.';
+    else if(rate>=30) msg+='저축률 30%대로 양호합니다. 고정비(통신·구독·보험)를 한 번 더 점검하면 40%까지 올릴 수 있어요.';
+    else if(rate>=10) msg+='저축률이 다소 낮습니다. 10억 목표를 위해서는 수입의 40~50% 저축을 권장합니다. 지출 상위 항목부터 줄여보세요.';
+    else msg+='⚠️ 저축률이 10% 미만입니다. 목표 달성이 어려운 수준이니 지출 구조조정이 시급합니다.';
+    adv.innerHTML=msg;
+  } else adv.innerHTML='';
+}
+
+/* ──────────────── 배당 캘린더 ──────────────── */
+function renderCalendar(){
+  const holders=DB.assets.filter(a=>a.yield>0);
+  const grid=document.getElementById('calGrid');
+  document.getElementById('calEmpty').style.display=holders.length?'none':'block';
+  if(!holders.length){ grid.innerHTML='';
+    ['calYear','calYearAfter','calMonthly','calAvgYield'].forEach(id=>document.getElementById(id).textContent='-');
+    return; }
+  const months=Array.from({length:12},()=>({total:0,items:[]}));
+  let yearTotal=0;
+  holders.forEach(a=>{
+    const annual=a.amt*a.yield/100; yearTotal+=annual;
+    const pm=(a.payMonths&&a.payMonths.length)? a.payMonths : null;
+    if(pm){
+      const per=annual/pm.length;
+      pm.forEach(mo=>{ months[mo-1].total+=per; months[mo-1].items.push(`${a.name} ${fmt(per)}`); });
+    }else{
+      const per=annual/12;
+      for(let mo=0;mo<12;mo++){ months[mo].total+=per; months[mo].items.push(`${a.name} ${fmt(per)}✳`); }
+    }
+  });
+  const nowM=new Date().getMonth();
+  grid.innerHTML=months.map((m,i)=>`
+    <div class="cal-m ${i===nowM?'now':''}">
+      <div class="mh">${i+1}월${i===nowM?' ←':''}</div>
+      <div class="mt">${m.total>0? fmt(m.total):'-'}</div>
+      <div class="mi">${m.items.join('<br>')}</div>
+    </div>`).join('');
+  const T=totalAssets();
+  document.getElementById('calYear').textContent=fmt(yearTotal);
+  document.getElementById('calYearAfter').textContent=fmt(yearTotal*(1-0.154));
+  document.getElementById('calMonthly').textContent=fmt(yearTotal*(1-0.154)/12);
+  document.getElementById('calAvgYield').textContent=T? (yearTotal/T*100).toFixed(2)+'%':'-';
+}
+
+/* ──────────────── 컨설팅 (룰 기반) ──────────────── */
+function getPhase(){
+  const T=totalAssets(), pct=T/DB.target*100;
+  if(pct<10) return {key:'seed', name:'🌱 종잣돈 형성기 (0~10%)'};
+  if(pct<40) return {key:'grow', name:'🌿 자산 증식기 (10~40%)'};
+  if(pct<75) return {key:'accel', name:'🌳 가속 성장기 (40~75%)'};
+  if(pct<100) return {key:'shift', name:'🏗️ 배당 전환기 (75~100%)'};
+  return {key:'fire', name:'🏖️ 배당 생활기 (목표 달성!)'};
+}
+
+function renderStrategy(){
+  const T=totalAssets(), sv=avgSaving(), m=monthsLeft(), tgt=DB.target;
+  const rr=requiredReturn(T,sv,tgt,m), ph=getPhase();
+  const needPmt=(()=>{
+    const i=Math.pow(1.07,1/12)-1, g=Math.pow(1+i,m);
+    return Math.max(0,(tgt-T*g)*i/(g-1));
+  })();
+
+  const PLAN={
+    seed:{ alloc:'성장 ETF 70% · 배당성장 20% · 현금 10%',
+      txt:`지금은 <b>수익률보다 저축액</b>이 압도적으로 중요한 시기입니다. 종잣돈 1억까지는 투자 수익보다 월 저축액이 자산 증가의 90%를 결정합니다. 미국 S&P500 등 지수 ETF에 적립식으로 자동이체를 걸어두고, 종목 공부는 병행하되 단타·테마주는 피하세요.`},
+    grow:{ alloc:'성장 ETF 50% · 배당성장주 35% · 현금 15%',
+      txt:`복리가 본격적으로 작동하기 시작하는 구간입니다. 성장 중심을 유지하되, <b>배당성장 ETF(SCHD류)</b> 비중을 늘려 미래 배당 기반을 깔아두세요. 연 1회 리밸런싱을 권장합니다.`},
+    accel:{ alloc:'성장 ETF 40% · 배당성장 40% · 고배당/리츠 10% · 현금 10%',
+      txt:`자산이 커진 만큼 <b>변동성 관리</b>가 중요해집니다. 한 종목 비중 10% 초과 금지, 시장 폭락 시 추가매수할 현금 10%를 항상 확보하세요. 배당 재투자는 계속 유지합니다.`},
+    shift:{ alloc:'배당성장 45% · 고배당/리츠 30% · 성장 15% · 현금 10%',
+      txt:`목표가 눈앞입니다. 이제 성장주를 단계적으로 <b>배당주로 교체</b>하면서 '월 현금흐름 포트폴리오'를 완성할 시기입니다. 배당 지급월을 분산(1·4·7·10월 / 2·5·8·11월 / 3·6·9·12월)하면 매달 배당이 들어오는 구조를 만들 수 있습니다.`},
+    fire:{ alloc:'고배당/배당성장 70% · 채권/리츠 20% · 현금 10%',
+      txt:`🎉 축하합니다! 이제 원금을 지키며 배당으로 생활하는 단계입니다. 배당 컷 리스크를 줄이기 위해 <b>최소 15개 이상 종목/ETF로 분산</b>하고, 연 배당성장률이 물가상승률을 넘는 종목을 중심으로 유지하세요.`}
+  }[ph.key];
+
+  let urgency='';
+  if(T<tgt){
+    if(rr===null) urgency=`⚠️ 현재 월 저축액(${fmt(sv)})으로는 어떤 수익률로도 기한 내 달성이 어렵습니다. 월 저축을 <b>${fmt(needPmt)}</b> 수준으로 늘리거나 목표 기한 연장을 검토하세요.`;
+    else if(rr>12) urgency=`⚠️ 필요 수익률 연 ${rr.toFixed(1)}%는 현실적으로 달성하기 어렵습니다(시장 평균 7~10%). 연 7% 기준으로는 월 <b>${fmt(needPmt)}</b> 투자가 필요합니다. 저축 증액 또는 기한 조정을 권합니다.`;
+    else if(rr>7) urgency=`필요 수익률 연 ${rr.toFixed(1)}% — 공격적이지만 불가능하지 않은 수준입니다. 성장 ETF 비중을 높게 유지하되, 저축액을 조금만 늘리면 부담이 크게 줄어듭니다.`;
+    else urgency=`✅ 필요 수익률이 연 ${rr===0?'0 (저축만으로 가능)':rr.toFixed(1)+'%'}로 매우 현실적입니다. 시장 평균(연 7~10%)만 따라가도 목표 달성이 가능하니, 꾸준함에만 집중하세요.`;
+  }
+
+  document.getElementById('strategyBox').innerHTML=`
+    <div class="advice">
+      <div class="phase">${ph.name}</div>
+      <b>추천 자산배분:</b> ${PLAN.alloc}<br><br>${PLAN.txt}
+    </div>
+    <div class="advice" style="border-left-color:var(--blue)">${urgency||'🎉 목표를 달성했습니다!'}</div>`;
+
+  renderStocks(ph.key);
+  document.getElementById('dashAdvice').innerHTML=`
+    <div class="advice" style="margin:0">
+      <div class="phase">${ph.name}</div>
+      ${urgency||PLAN.txt}<br><br>
+      <b>이번 달 할 일:</b> ① 가계부 기록 ② 자산 시세 갱신(🔄) ③ 적립식 매수 실행
+    </div>`;
+}
+
+function renderStocks(phase){
+  const S={
+    growth:[
+      {nm:'KODEX 미국S&P500',tk:'379800',yd:'성장형 · 분배율 ~1.3%',ds:'미국 대표지수 적립식의 기본. 연금/ISA 계좌에서 세제혜택과 함께 모으기 좋음'},
+      {nm:'TIGER 미국나스닥100',tk:'133690',yd:'성장형 · 분배율 ~0.5%',ds:'기술주 중심 고성장. 변동성이 크니 전체의 20% 이내 권장'},
+      {nm:'Vanguard S&P500',tk:'VOO',yd:'성장형 · 배당 ~1.3%',ds:'미국 직투의 정석. 환전 수수료를 감안해도 장기 보유 시 유리'},
+    ],
+    divGrowth:[
+      {nm:'Schwab 미국배당주',tk:'SCHD',yd:'배당 ~3.5% · 배당성장 연 10%+',ds:'배당성장 투자의 교과서. 10년 보유 시 매입가 대비 배당률이 크게 상승'},
+      {nm:'TIGER 미국배당다우존스',tk:'458730',yd:'배당 ~3.5%',ds:'SCHD의 국내 상장판. 연금저축·ISA에서 과세이연 가능, 월배당'},
+      {nm:'KT&G',tk:'033780',yd:'배당 ~4~5%',ds:'국내 대표 배당주. 꾸준한 배당 증액과 자사주 정책'},
+      {nm:'우리금융지주',tk:'316140',yd:'배당 ~5~6%',ds:'국내 금융지주 고배당. 분기배당 전환으로 현금흐름 개선'},
+    ],
+    highDiv:[
+      {nm:'JPMorgan 커버드콜',tk:'JEPI',yd:'분배 ~7~8% · 월배당',ds:'커버드콜 전략으로 높은 월 분배금. 상승장 수익은 제한되므로 배당 전환기에 적합'},
+      {nm:'리얼티인컴',tk:'O',yd:'배당 ~5% · 월배당',ds:'월배당 리츠의 대명사. 50년 이상 배당 지급, 25년 이상 연속 증액'},
+      {nm:'맥쿼리인프라',tk:'088980',yd:'분배 ~6%',ds:'국내 인프라 펀드. 도로·항만 기반의 안정적 분배금'},
+      {nm:'TIGER 리츠부동산인프라',tk:'329200',yd:'분배 ~6~7% · 월배당',ds:'국내 리츠 분산투자. 부동산 현금흐름을 소액으로'},
+    ]};
+  const pick={ seed:[...S.growth,...S.divGrowth.slice(0,1)],
+    grow:[...S.growth.slice(0,2),...S.divGrowth],
+    accel:[...S.growth.slice(0,1),...S.divGrowth,...S.highDiv.slice(0,2)],
+    shift:[...S.divGrowth,...S.highDiv],
+    fire:[...S.divGrowth.slice(0,2),...S.highDiv] }[phase];
+  document.getElementById('stockBox').innerHTML=pick.map(s=>`
+    <div class="stock"><div class="nm">${s.nm}<span class="tk">${s.tk}</span></div>
+    <div class="yd">${s.yd}</div><div class="ds">${s.ds}</div></div>`).join('');
+}
+
+/* ──────────────── 차트 ──────────────── */
+function drawChart(){
+  const cv=document.getElementById('chart'); if(!cv.offsetWidth) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width=cv.offsetWidth*2; const H=cv.height=640;
+  ctx.clearRect(0,0,W,H);
+  const T=totalAssets(), sv=avgSaving(), m=monthsLeft(), tgt=DB.target, r=DB.expReturn;
+  const pad={l:90,r:30,t:30,b:50};
+  const maxY=Math.max(tgt*1.15, futureValue(T,sv,r,m)*1.05, 1);
+  const X=t=>pad.l+(W-pad.l-pad.r)*t/m;
+  const Y=v=>H-pad.b-(H-pad.t-pad.b)*v/maxY;
+  ctx.strokeStyle='#232b48'; ctx.fillStyle='#93a0c2'; ctx.font='20px Segoe UI'; ctx.lineWidth=1;
+  for(let k=0;k<=4;k++){ const v=maxY*k/4, y=Y(v);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    ctx.fillText((v/100000000).toFixed(1)+'억', 10, y+6); }
+  for(let yr=0; yr<=m/12; yr+=2){ const x=X(yr*12);
+    ctx.fillText(yr+'년', x-14, H-15); }
+  ctx.strokeStyle='#f5c542'; ctx.setLineDash([10,8]); ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(pad.l,Y(tgt)); ctx.lineTo(W-pad.r,Y(tgt)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#f5c542'; ctx.fillText('🎯 목표 '+(tgt/100000000)+'억', W-260, Y(tgt)-12);
+  const lines=[[Math.max(r-3,1),'#5b9cff44'],[r,'#3ddc84'],[r+3,'#a78bfa44']];
+  lines.forEach(([rate,color])=>{
+    ctx.strokeStyle=color; ctx.lineWidth=rate===r?5:3; ctx.beginPath();
+    for(let t=0;t<=m;t++){ const v=futureValue(T,sv,rate,t);
+      t===0? ctx.moveTo(X(t),Y(v)) : ctx.lineTo(X(t),Y(Math.min(v,maxY))); }
+    ctx.stroke(); });
+  ctx.fillStyle='#3ddc84';
+  ctx.fillText(`기본 시나리오: 연 ${r}%`, pad.l+10, pad.t+10);
+  ctx.fillStyle='#93a0c2';
+  ctx.fillText(`(연한 선: 연 ${Math.max(r-3,1)}% / 연 ${r+3}%)`, pad.l+240, pad.t+10);
+  let hit=null;
+  for(let t=0;t<=m;t++){ if(futureValue(T,sv,r,t)>=tgt){hit=t;break;} }
+  document.getElementById('chartNote').innerHTML = hit!==null
+    ? `연 ${r}% 수익률 기준, 약 <b style="color:var(--green)">${(hit/12).toFixed(1)}년 후</b> 목표 달성이 예상됩니다.`
+    : `연 ${r}% 기준으로는 기한 내 도달이 어렵습니다. 월 저축액을 늘리거나 '투자 전략' 탭의 제안을 확인하세요.`;
+}
+
+function drawPie(){
+  const cv=document.getElementById('pie'); if(!cv.offsetWidth) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width=cv.offsetWidth*2; const H=cv.height=480;
+  ctx.clearRect(0,0,W,H);
+  const sums={}; DB.assets.forEach(a=>sums[a.cat]=(sums[a.cat]||0)+a.amt);
+  const T=totalAssets();
+  if(!T){ document.getElementById('pieNote').textContent='자산을 등록하면 구성 비율이 표시됩니다.'; return; }
+  const colors={cash:'#3ddc84',stock:'#5b9cff',fund:'#a78bfa',estate:'#f5c542',etc:'#93a0c2'};
+  let ang=-Math.PI/2; const cx=W/2, cy=H/2, R=Math.min(W,H)/2-40;
+  let legend=[];
+  Object.entries(sums).forEach(([cat,v])=>{
+    const a2=ang+v/T*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,ang,a2); ctx.closePath();
+    ctx.fillStyle=colors[cat]; ctx.fill();
+    legend.push(`<span style="color:${colors[cat]}">●</span> ${CAT[cat]} ${(v/T*100).toFixed(0)}%`);
+    ang=a2; });
+  ctx.beginPath(); ctx.arc(cx,cy,R*0.55,0,7); ctx.fillStyle='#1a2035'; ctx.fill();
+  ctx.fillStyle='#e8ecf8'; ctx.font='bold 26px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText(fmt(T), cx, cy+8); ctx.textAlign='left';
+  document.getElementById('pieNote').innerHTML=legend.join(' &nbsp; ');
+}
+
+/* ──────────────── 배당 시뮬레이터 ──────────────── */
+function renderDividend(){
+  const eok=+document.getElementById('dAsset').value;
+  const yd=+document.getElementById('dYield').value;
+  document.getElementById('dAssetV').textContent=eok+'억';
+  document.getElementById('dYieldV').textContent=yd.toFixed(1)+'%';
+  const asset=eok*100000000, yearly=asset*yd/100, monthly=yearly*(1-0.154)/12;
+  document.getElementById('dMonthly').textContent=fmt(monthly);
+  document.getElementById('dYearly').textContent=fmt(yearly);
+  let n='';
+  if(monthly>=4000000) n='💎 월 400만원 이상 — 여유로운 배당 생활이 가능한 수준입니다.';
+  else if(monthly>=2500000) n='✅ 한국 가구 평균 생활비 수준을 배당으로 충당할 수 있습니다.';
+  else if(monthly>=1500000) n='🟡 기본 생활은 가능하지만, 부분 근로소득과 병행을 권장합니다.';
+  else n='아직 배당만으로 생활하기엔 부족합니다. 자산 규모나 배당률을 조정해 보세요.';
+  n+='<br>※ 금융소득 연 2,000만원 초과 시 종합과세 대상이 될 수 있습니다(15.4% 분리과세 한도). 연금계좌·ISA 활용 시 절세 가능.';
+  document.getElementById('dNote').innerHTML=n;
+}
+function calcReverse(){
+  const want=+document.getElementById('dWant').value||0;
+  const yd=+document.getElementById('dWantYield').value||4;
+  const need=want*12/(1-0.154)/(yd/100);
+  document.getElementById('dReverseBox').style.display='block';
+  document.getElementById('dReverse').textContent=fmt(need);
+}
+
+/* ──────────────── 입력 핸들러 ──────────────── */
+async function addAsset(){
+  const name=document.getElementById('aName').value.trim();
+  const cat=document.getElementById('aCat').value;
+  const amt=+document.getElementById('aAmt').value;
+  const ticker=document.getElementById('aTicker').value.trim();
+  const shares=+document.getElementById('aShares').value||0;
+  const manualYield=+document.getElementById('aYield').value||0;
+  const payMStr=document.getElementById('aPayM').value.trim();
+  const st=document.getElementById('aStatus'), btn=document.getElementById('addBtn');
+  if(!name){ alert('자산 이름을 입력해 주세요.'); return; }
+  if(!amt && !(ticker&&shares)){ alert('평가 금액을 입력하거나, 티커+수량을 입력해 주세요.'); return; }
+
+  let a=DB.assets.find(x=>x.name===name);
+  if(!a){ a={name,cat,amt:amt||0}; DB.assets.push(a); }
+  a.cat=cat;
+  if(amt) a.amt=amt;
+  if(ticker) a.ticker=ticker;
+  if(shares) a.shares=shares;
+  if(manualYield){ a.yield=manualYield; }
+  if(payMStr){ a.payMonths=payMStr.split(',').map(s=>+s.trim()).filter(n=>n>=1&&n<=12); }
+
+  if(a.ticker&&a.shares){
+    btn.disabled=true; st.textContent=`🔄 '${a.ticker}' 시세 조회 중...`;
+    const ok=await applyQuote(a);
+    st.textContent = ok
+      ? `✅ ${a.name}: 현재가 기준 ${fmtFull(a.amt)}${a.yield>0?` / 배당률 ${a.yield}%`:''} 등록 완료`
+      : `⚠️ 시세 조회 실패 — 입력한 평가액으로 저장했습니다. 나중에 🔄 버튼으로 다시 시도하세요.`;
+    btn.disabled=false;
+    if(ok) DB.lastUpdate=thisMonth();
+  } else st.textContent=`✅ ${a.name} 저장 완료`;
+
+  ['aName','aAmt','aTicker','aShares','aYield','aPayM'].forEach(id=>document.getElementById(id).value='');
+  save(); renderAll();
+}
+function delAsset(i){ if(confirm(`'${DB.assets[i].name}' 자산을 삭제할까요?`)){ DB.assets.splice(i,1); save(); renderAll(); } }
+function addLedger(){
+  const month=document.getElementById('lMonth').value;
+  const income=+document.getElementById('lIncome').value;
+  const expense=+document.getElementById('lExpense').value;
+  if(!month||isNaN(income)||isNaN(expense)){ alert('연월·수입·지출을 모두 입력해 주세요.'); return; }
+  const ex=DB.ledger.find(l=>l.month===month);
+  if(ex){ ex.income=income; ex.expense=expense; } else DB.ledger.push({month,income,expense});
+  document.getElementById('lIncome').value=''; document.getElementById('lExpense').value='';
+  save(); renderAll();
+}
+function delLedger(i){ if(confirm(`${DB.ledger[i].month} 기록을 삭제할까요?`)){ DB.ledger.splice(i,1); save(); renderAll(); } }
+function saveSettings(){
+  DB.target=+document.getElementById('sTarget').value||1000000000;
+  DB.targetDate=document.getElementById('sDate').value||DB.targetDate;
+  DB.expReturn=+document.getElementById('sReturn').value||7;
+  save(); renderAll(); alert('설정이 저장되었습니다.');
+}
+function exportData(){
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(DB,null,2));
+  a.download=`재무컨설턴트_백업_${new Date().toISOString().slice(0,10)}.json`; a.click();
+}
+function importData(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
+    if(!d.target||!Array.isArray(d.assets)) throw 0;
+    DB=d; DB.lastUpdate=DB.lastUpdate||''; save(); renderAll(); alert('복원 완료!'); }
+    catch(e){ alert('올바른 백업 파일이 아닙니다.'); } };
+  rd.readAsText(f);
+}
+
+/* ──────────────── 초기화 ──────────────── */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  document.getElementById('p-'+t.dataset.p).classList.add('on');
+  if(t.dataset.p==='dash') drawChart();
+  if(t.dataset.p==='asset') drawPie();
+  if(t.dataset.p==='cal') renderCalendar();
+});
+['dAsset','dYield'].forEach(id=>document.getElementById(id).oninput=renderDividend);
+window.onresize=()=>{ drawChart(); drawPie(); };
+
+function renderAll(){
+  document.getElementById('sTarget').value=DB.target;
+  document.getElementById('sDate').value=DB.targetDate;
+  document.getElementById('sReturn').value=DB.expReturn;
+  document.getElementById('lMonth').value=thisMonth();
+  renderBanner(); renderGoal(); renderScenarios(); renderAssets(); renderLedger();
+  renderStrategy(); renderCalendar(); drawChart(); renderDividend();
+}
+renderAll();
+
+/* PWA 서비스워커 (https 또는 localhost에서만) */
+if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

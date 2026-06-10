@@ -1,0 +1,16 @@
+{
+  "name": "나의 재무컨설턴트 — 10년 10억 프로젝트",
+  "short_name": "재무컨설턴트",
+  "description": "10년 안에 10억 모아 배당금으로 생활하기 위한 개인 재무관리 앱",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1320",
+  "theme_color": "#0f1320",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
