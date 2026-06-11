@@ -210,6 +210,27 @@
 
   <!-- ── 자산 관리 ── -->
   <div class="page" id="p-asset">
+    <div class="card">
+      <h2>⚡ 빠른 거래 입력 <span style="font-size:12px;color:var(--sub);font-weight:400">— 사고 판 것만 한 줄로</span></h2>
+      <div class="chat-input" style="margin-top:0">
+        <input id="qtInput" placeholder="예: SCHD 10주 매수 / 삼성전자 5주 매도 / JEPI 20주" onkeydown="if(event.key==='Enter')quickTrade()">
+        <button onclick="quickTrade()" id="qtBtn">반영</button>
+      </div>
+      <div class="status" id="qtStatus"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="ghost" style="margin:0" onclick="document.getElementById('shotFile').click()">📷 증권사 잔고 스크린샷으로 한번에 입력</button>
+        <input type="file" id="shotFile" accept="image/*" style="display:none" onchange="importShot(event)">
+      </div>
+      <div id="importPreview" style="display:none">
+        <table style="margin-top:10px"><thead><tr><th>종목</th><th>티커</th><th class="num">수량</th></tr></thead>
+        <tbody id="importBody"></tbody></table>
+        <div class="row">
+          <button onclick="applyImport()">✅ 전부 반영하기</button>
+          <button class="ghost" onclick="cancelImport()">취소</button>
+        </div>
+      </div>
+      <div class="note">빠른 입력은 기존 보유 수량에 자동으로 더하거나 뺍니다. 새 종목이면 자동 등록 후 시세를 조회합니다. 스크린샷 인식은 AI 상담 탭의 API 키를 사용합니다.</div>
+    </div>
     <div class="grid2">
       <div class="card">
         <h2>➕ 자산 추가 / 수정</h2>
@@ -1008,6 +1029,133 @@ async function sendChat(){
   btn.disabled=false;
   renderChat();
 }
+
+/* ──────────────── 빠른 거래 입력 ──────────────── */
+function findAsset(q){
+  const u=q.toUpperCase();
+  return DB.assets.find(a=>a.name.toUpperCase()===u || (a.ticker&&a.ticker.toUpperCase()===u));
+}
+async function quickTrade(){
+  const inp=document.getElementById('qtInput'), st=document.getElementById('qtStatus'), btn=document.getElementById('qtBtn');
+  const s=inp.value.trim();
+  const m=s.match(/^(.+?)\s+([\d,]+(?:\.\d+)?)\s*주\s*(매수|매도|추가|판매)?\s*$/);
+  if(!m){ st.textContent='⚠️ 형식: "종목명(또는 티커) 수량주 매수/매도" — 예: SCHD 10주 매수'; return; }
+  const name=m[1].trim(), qty=parseFloat(m[2].replace(/,/g,'')), isSell=(m[3]==='매도'||m[3]==='판매');
+  if(!qty){ st.textContent='⚠️ 수량을 확인해 주세요.'; return; }
+  btn.disabled=true;
+  let a=findAsset(name);
+  if(a){
+    const newShares=+( (a.shares||0) + (isSell? -qty: qty) ).toFixed(4);
+    if(newShares<=0){
+      if(confirm(`'${a.name}' 보유 수량이 0 이하가 됩니다. 자산을 삭제할까요?`)){
+        DB.assets.splice(DB.assets.indexOf(a),1);
+        st.textContent=`🗑 ${a.name} 전량 매도 — 자산 목록에서 제거했습니다.`;
+        save(); renderAll(); btn.disabled=false; inp.value=''; return;
+      } else { btn.disabled=false; return; }
+    }
+    a.shares=newShares;
+    st.textContent=`🔄 ${a.name} ${isSell?'매도':'매수'} ${qty}주 → 보유 ${newShares}주, 시세 갱신 중...`;
+    if(a.ticker){ const ok=await applyQuote(a);
+      st.textContent=`✅ ${a.name}: 보유 ${newShares}주, 평가액 ${fmtFull(a.amt)}${ok?'':' (시세조회 실패 — 이전 단가 기준)'}`;
+      if(!ok&&a.lastPrice) a.amt=Math.round(a.lastPrice*newShares*(a.currency==='USD'?(FX||1350):1));
+    } else { st.textContent=`✅ ${a.name}: 보유 ${newShares}주 (티커가 없어 평가액은 수동 관리)`; }
+  } else {
+    // 새 종목: 입력값이 티커처럼 생겼으면 티커로, 아니면 이름만
+    const tickerLike=/^[A-Za-z.]{1,6}$|^\d{6}$/.test(name);
+    a={name:name, cat:'stock', amt:0, shares:qty};
+    if(tickerLike) a.ticker=name;
+    DB.assets.push(a);
+    if(a.ticker){
+      st.textContent=`🔄 신규 종목 '${name}' 등록, 시세 조회 중...`;
+      const ok=await applyQuote(a);
+      st.textContent= ok? `✅ 신규 등록: ${a.name} ${qty}주, 평가액 ${fmtFull(a.amt)}${a.yield>0?`, 배당률 ${a.yield}%`:''}`
+        : `✅ '${name}' ${qty}주 등록 — ⚠️ 시세 조회 실패, 아래에서 티커/평가액을 확인해 주세요.`;
+    } else {
+      st.textContent=`✅ '${name}' ${qty}주 등록 — 티커가 없어 평가액은 아래에서 직접 입력해 주세요.`;
+    }
+  }
+  DB.lastUpdate=thisMonth(); save(); renderAll();
+  inp.value=''; btn.disabled=false;
+}
+
+/* ──────────────── 스크린샷 잔고 인식 (AI Vision) ──────────────── */
+let PENDING_IMPORT=null;
+function resizeImage(file){ // 토큰 절약을 위해 긴 변 1568px로 축소
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1568, scale=Math.min(1, max/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*scale); cv.height=Math.round(img.height*scale);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      res(cv.toDataURL('image/jpeg',0.85).split(',')[1]);
+    };
+    img.onerror=rej;
+    img.src=URL.createObjectURL(file);
+  });
+}
+const VISION_PROMPT=`이 이미지는 증권사 앱의 보유 잔고 화면이다. 보유 종목을 모두 추출해서 아래 형식의 JSON 배열만 출력해라. 설명, 코드블록 없이 JSON만.
+[{"name":"종목명","ticker":"미국주식은 티커, 한국주식은 6자리 종목코드, 확실하지 않으면 null","shares":수량(숫자)}]
+수량은 '주' 단위 보유수량이다. 평가금액이나 수익률은 무시해라.`;
+
+async function callClaudeVision(b64){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'content-type':'application/json','x-api-key':AI.key,
+      'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-opus-4-8',max_tokens:2000,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+        {type:'text',text:VISION_PROMPT}]}]})
+  });
+  const j=await r.json();
+  if(!r.ok) throw new Error(j.error&&j.error.message||('HTTP '+r.status));
+  return (j.content||[]).find(b=>b.type==='text').text;
+}
+async function callGeminiVision(b64){
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${AI.key}`,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({contents:[{role:'user',parts:[
+      {inline_data:{mime_type:'image/jpeg',data:b64}},{text:VISION_PROMPT}]}]})
+  });
+  const j=await r.json();
+  if(!r.ok) throw new Error(j.error&&j.error.message||('HTTP '+r.status));
+  return j.candidates[0].content.parts.map(p=>p.text).join('');
+}
+async function importShot(ev){
+  const file=ev.target.files[0]; ev.target.value='';
+  if(!file) return;
+  const st=document.getElementById('qtStatus');
+  if(!AI){ st.textContent='⚠️ 먼저 AI 상담 탭에서 API 키를 등록해 주세요. (스크린샷 인식에 AI가 필요합니다)'; return; }
+  st.textContent='📷 이미지 분석 중... (몇 초 걸립니다)';
+  try{
+    const b64=await resizeImage(file);
+    const text = AI.provider==='claude'? await callClaudeVision(b64) : await callGeminiVision(b64);
+    const jm=text.match(/\[[\s\S]*\]/);
+    if(!jm) throw new Error('종목을 찾지 못했습니다');
+    const items=JSON.parse(jm[0]).filter(x=>x.name&&x.shares>0);
+    if(!items.length) throw new Error('인식된 보유 종목이 없습니다');
+    PENDING_IMPORT=items;
+    document.getElementById('importBody').innerHTML=items.map(x=>
+      `<tr><td><b>${escapeHtml(String(x.name))}</b></td><td>${x.ticker?escapeHtml(String(x.ticker)):'-'}</td><td class="num">${x.shares}주</td></tr>`).join('');
+    document.getElementById('importPreview').style.display='block';
+    st.textContent=`✅ ${items.length}개 종목 인식! 아래 내용을 확인하고 반영하세요. (기존 종목은 수량이 이 값으로 교체됩니다)`;
+  }catch(e){ st.textContent='⚠️ 인식 실패: '+e.message; }
+}
+async function applyImport(){
+  if(!PENDING_IMPORT) return;
+  const st=document.getElementById('qtStatus');
+  PENDING_IMPORT.forEach(x=>{
+    let a=findAsset(String(x.ticker||''))||findAsset(String(x.name));
+    if(a){ a.shares=x.shares; if(x.ticker&&!a.ticker) a.ticker=String(x.ticker); }
+    else DB.assets.push({name:String(x.name),cat:'stock',amt:0,shares:x.shares,
+      ...(x.ticker?{ticker:String(x.ticker)}:{})});
+  });
+  cancelImport();
+  st.textContent='🔄 반영 완료 — 전체 시세 갱신 중...';
+  await refreshAll();
+}
+function cancelImport(){ PENDING_IMPORT=null; document.getElementById('importPreview').style.display='none'; }
 
 /* ──────────────── 자동 시세 반영 ──────────────── */
 async function autoRefresh(){
