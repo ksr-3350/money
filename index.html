@@ -121,6 +121,23 @@
   .dividend-big{text-align:center;padding:18px;background:#141a2e;border-radius:14px;margin-top:12px}
   .dividend-big .m{font-size:30px;font-weight:800;color:var(--green)}
   .dividend-big .s{font-size:13px;color:var(--sub);margin-top:4px}
+
+  /* AI 채팅 */
+  .chat-box{background:#10152a;border:1px solid var(--line);border-radius:14px;
+    height:420px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:85%;padding:11px 14px;border-radius:14px;font-size:14px;line-height:1.65;
+    white-space:pre-wrap;word-break:break-word}
+  .msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+  .msg.ai{align-self:flex-start;background:var(--card2);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .msg.ai b{color:var(--gold)}
+  .msg.thinking{color:var(--sub);font-style:italic}
+  .chat-input{display:flex;gap:8px;margin-top:10px}
+  .chat-input input{flex:1}
+  .chat-input button{margin:0;min-width:70px}
+  .quick-q{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .quick-q button{margin:0;padding:7px 12px;font-size:12.5px;background:transparent;
+    border:1px solid var(--line);color:var(--sub)}
+  .quick-q button:hover{border-color:var(--gold);color:var(--gold)}
   .status{font-size:13px;color:var(--gold);margin-top:8px;min-height:18px}
   details{margin-top:8px}
   summary{font-size:13px;color:var(--sub);cursor:pointer}
@@ -166,6 +183,7 @@
     <div class="tab" data-p="strategy">🧭 투자 전략</div>
     <div class="tab" data-p="cal">📅 배당 캘린더</div>
     <div class="tab" data-p="dividend">🏖️ 배당 시뮬</div>
+    <div class="tab" data-p="ai">🤖 AI 상담</div>
     <div class="tab" data-p="setting">⚙️ 설정</div>
   </div>
 
@@ -319,6 +337,49 @@
     </div>
   </div>
 
+  <!-- ── AI 상담 ── -->
+  <div class="page" id="p-ai">
+    <div class="card">
+      <h2>🤖 AI 재무 상담사
+        <span style="font-size:12px;color:var(--sub);font-weight:400">— 내 자산·가계부·목표를 자동으로 읽고 상담합니다</span>
+      </h2>
+      <div id="aiSetup" style="display:none">
+        <div class="advice" style="border-left-color:var(--blue)">
+          AI 상담을 시작하려면 <b>API 키</b>가 한 번 필요합니다 (이 기기에만 저장, 외부 유출 없음).<br><br>
+          <b>① Claude (Anthropic) — 권장</b><br>
+          &nbsp;&nbsp;<a href="https://platform.claude.com" target="_blank" style="color:var(--blue)">platform.claude.com</a> 가입 → API Keys → Create Key → 복사 (사용량 과금, 상담 1회 수십 원 수준)<br><br>
+          <b>② Gemini (Google) — 무료</b><br>
+          &nbsp;&nbsp;<a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--blue)">aistudio.google.com/apikey</a> → 구글 로그인 → API 키 만들기 → 복사 (무료 한도 내 사용)
+        </div>
+        <div class="row">
+          <div><label>AI 종류</label>
+            <select id="aiProvider">
+              <option value="claude">Claude (Anthropic)</option>
+              <option value="gemini">Gemini (Google, 무료)</option>
+            </select></div>
+          <div style="flex:2"><label>API 키</label><input id="aiKey" type="password" placeholder="sk-ant-... 또는 AIza..."></div>
+        </div>
+        <button onclick="saveAiKey()">저장하고 상담 시작</button>
+      </div>
+      <div id="aiChat" style="display:none">
+        <div class="chat-box" id="chatBox"></div>
+        <div class="chat-input">
+          <input id="chatInput" placeholder="예: 지금 상황에서 뭘 먼저 해야 할까?" onkeydown="if(event.key==='Enter')sendChat()">
+          <button onclick="sendChat()" id="chatBtn">전송</button>
+        </div>
+        <div class="quick-q">
+          <button onclick="quickAsk('내 포트폴리오를 진단하고 개선점을 알려줘')">📊 포트폴리오 진단</button>
+          <button onclick="quickAsk('이번 달 내 재무 상태를 점검해줘')">🧾 이번 달 점검</button>
+          <button onclick="quickAsk('지금 추가 매수한다면 어떤 종목 유형이 좋을까?')">🛒 매수 상담</button>
+          <button onclick="quickAsk('10억 목표 달성을 앞당기려면 뭘 바꿔야 할까?')">🎯 목표 앞당기기</button>
+          <button onclick="clearChat()">🗑 대화 지우기</button>
+          <button onclick="resetAiKey()">🔑 키 변경</button>
+        </div>
+        <div class="note">⚠️ AI의 답변은 투자 참고용이며, 투자 결정과 책임은 본인에게 있습니다. 상담 시 자산 요약 정보가 선택한 AI 서비스(Anthropic/Google)로 전송됩니다.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── 설정 ── -->
   <div class="page" id="p-setting">
     <div class="card">
@@ -462,9 +523,9 @@ async function refreshAll(){
     st.textContent=`🔄 ${a.name} 시세 조회 중... (${ok+fail.length+1}/${targets.length})`;
     (await applyQuote(a))? ok++ : fail.push(a.name);
   }
-  DB.lastUpdate=thisMonth(); save(); renderAll();
+  DB.lastUpdate=thisMonth(); DB.lastQuoteAt=Date.now(); save(); renderAll();
   document.getElementById('refStatus').textContent =
-    `✅ ${ok}개 갱신 완료` + (fail.length? ` / ⚠️ 실패: ${fail.join(', ')} (잠시 후 다시 시도해 보세요)`:'');
+    `✅ ${ok}개 갱신 완료 (${new Date().toLocaleTimeString('ko-KR')})` + (fail.length? ` / ⚠️ 실패: ${fail.join(', ')} (잠시 후 다시 시도해 보세요)`:'');
   btn.disabled=false;
 }
 
@@ -821,6 +882,144 @@ function importData(ev){
   rd.readAsText(f);
 }
 
+/* ──────────────── AI 재무 상담 ──────────────── */
+const AI_KEY='myFinanceAI_v1', CHAT_KEY='myFinanceChat_v1';
+let AI = JSON.parse(localStorage.getItem(AI_KEY)||'null');           // {provider, key}
+let CHAT = JSON.parse(localStorage.getItem(CHAT_KEY)||'[]');         // [{role, text}]
+
+function buildContext(){
+  const T=totalAssets(), tgt=DB.target, m=monthsLeft(), sv=avgSaving();
+  const rr=requiredReturn(T,sv,tgt,m), ph=getPhase(), pd=portfolioDividend();
+  const assets=DB.assets.map(a=>
+    `- ${a.name}(${CAT[a.cat]}${a.ticker?', '+a.ticker:''}): ${fmtFull(a.amt)}`+
+    (a.yield>0?`, 배당률 ${a.yield}%${a.payMonths&&a.payMonths.length?', 지급월 '+a.payMonths.join('·'):''}`:'')
+  ).join('\n')||'(등록된 자산 없음)';
+  const ledger=[...DB.ledger].sort((a,b)=>b.month.localeCompare(a.month)).slice(0,6)
+    .map(l=>`- ${l.month}: 수입 ${fmtFull(l.income)}, 지출 ${fmtFull(l.expense)}, 저축 ${fmtFull(l.income-l.expense)}`)
+    .join('\n')||'(가계부 기록 없음)';
+  return `[사용자 재무 현황 — ${new Date().toISOString().slice(0,10)} 기준]
+목표: ${fmt(tgt)} (목표일 ${DB.targetDate}, 남은 기간 약 ${(m/12).toFixed(1)}년)
+현재 총자산: ${fmt(T)} (달성률 ${(T/tgt*100).toFixed(1)}%)
+현재 단계: ${ph.name}
+최근 6개월 평균 월 저축액: ${sv>0?fmt(sv):'기록 없음'}
+목표 달성 필요 연수익률: ${T>=tgt?'달성 완료':rr===null?'현 저축액으로 불가능':rr<=0.01?'저축만으로 가능':rr.toFixed(1)+'%'}
+보유자산 연 예상 배당금(세전): ${pd>0?fmt(pd):'없음'}
+
+[보유 자산]
+${assets}
+
+[최근 가계부]
+${ledger}`;
+}
+
+const AI_SYSTEM=`너는 한국인 개인투자자를 위한 전담 재무컨설턴트다. 사용자의 목표는 정해진 기한 안에 목표 자산을 모아 배당금으로 생활하는 것이다.
+
+상담 원칙:
+- 한국어로, 친근하지만 전문적으로 답한다. 답변은 간결하게(보통 300자 이내), 사용자가 더 묻기 전에는 장황하게 늘어놓지 않는다.
+- 반드시 아래 제공되는 사용자의 실제 재무 데이터(자산, 가계부, 진행률)에 근거해서 구체적인 숫자로 답한다.
+- 특정 종목 추천 시 일반적으로 검증된 우량 배당주/ETF 위주로 제안하고, "투자 판단과 책임은 본인에게 있다"는 점을 자연스럽게 상기시킨다.
+- 단타, 레버리지, 테마주, 코인 몰빵 같은 고위험 행동은 만류한다.
+- 한국 세제(배당소득세 15.4%, 금융소득종합과세 2천만원, ISA/연금저축 절세)를 고려해 조언한다.
+- 모르는 최신 시세나 미래 가격은 단정하지 않는다.`;
+
+async function callClaude(messages){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'content-type':'application/json',
+      'x-api-key':AI.key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-opus-4-8',
+      max_tokens:1500,
+      system:[{type:'text',text:AI_SYSTEM},{type:'text',text:buildContext()}],
+      messages:messages.map(m=>({role:m.role,content:m.text}))
+    })
+  });
+  const j=await r.json();
+  if(!r.ok) throw new Error(j.error&&j.error.message||('HTTP '+r.status));
+  const block=(j.content||[]).find(b=>b.type==='text');
+  return block?block.text:'(응답 없음)';
+}
+
+async function callGemini(messages){
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${AI.key}`,{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({
+      system_instruction:{parts:[{text:AI_SYSTEM+'\n\n'+buildContext()}]},
+      contents:messages.map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.text}]}))
+    })
+  });
+  const j=await r.json();
+  if(!r.ok) throw new Error(j.error&&j.error.message||('HTTP '+r.status));
+  try{ return j.candidates[0].content.parts.map(p=>p.text).join(''); }
+  catch(e){ throw new Error('응답 해석 실패'); }
+}
+
+function renderAi(){
+  document.getElementById('aiSetup').style.display = AI? 'none':'block';
+  document.getElementById('aiChat').style.display = AI? 'block':'none';
+  if(AI) renderChat();
+}
+function renderChat(){
+  const box=document.getElementById('chatBox');
+  if(!CHAT.length){
+    box.innerHTML=`<div class="msg ai">안녕하세요! 저는 당신의 AI 재무컨설턴트입니다. 💰<br>현재 자산과 가계부를 이미 읽고 있으니, 편하게 물어보세요.<br>아래 버튼을 눌러 바로 시작할 수도 있어요.</div>`;
+  } else {
+    box.innerHTML=CHAT.map(m=>`<div class="msg ${m.role==='user'?'user':'ai'}">${escapeHtml(m.text)}</div>`).join('');
+  }
+  box.scrollTop=box.scrollHeight;
+}
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function saveAiKey(){
+  const provider=document.getElementById('aiProvider').value;
+  const key=document.getElementById('aiKey').value.trim();
+  if(!key){ alert('API 키를 입력해 주세요.'); return; }
+  AI={provider,key};
+  localStorage.setItem(AI_KEY,JSON.stringify(AI));
+  renderAi();
+}
+function resetAiKey(){ if(confirm('저장된 API 키를 삭제할까요?')){ AI=null; localStorage.removeItem(AI_KEY); renderAi(); } }
+function clearChat(){ CHAT=[]; localStorage.removeItem(CHAT_KEY); renderChat(); }
+function quickAsk(q){ document.getElementById('chatInput').value=q; sendChat(); }
+
+async function sendChat(){
+  const input=document.getElementById('chatInput'), btn=document.getElementById('chatBtn');
+  const text=input.value.trim();
+  if(!text||!AI) return;
+  input.value=''; btn.disabled=true;
+  CHAT.push({role:'user',text});
+  renderChat();
+  const box=document.getElementById('chatBox');
+  box.insertAdjacentHTML('beforeend','<div class="msg ai thinking" id="thinkingMsg">생각 중...</div>');
+  box.scrollTop=box.scrollHeight;
+  try{
+    const history=CHAT.slice(-12); // 최근 12개 메시지만 전송
+    const answer = AI.provider==='claude'? await callClaude(history) : await callGemini(history);
+    CHAT.push({role:'assistant',text:answer});
+  }catch(e){
+    CHAT.push({role:'assistant',text:'⚠️ 오류: '+e.message+'\n\nAPI 키가 올바른지, 잔액/무료한도가 남아있는지 확인해 주세요. (🔑 키 변경 버튼으로 재설정 가능)'});
+  }
+  localStorage.setItem(CHAT_KEY,JSON.stringify(CHAT.slice(-40)));
+  btn.disabled=false;
+  renderChat();
+}
+
+/* ──────────────── 자동 시세 반영 ──────────────── */
+async function autoRefresh(){
+  const targets=DB.assets.filter(a=>a.ticker&&a.shares);
+  if(!targets.length) return;
+  const last=DB.lastQuoteAt||0;
+  if(Date.now()-last < 3600000) return;   // 1시간 이내 갱신했으면 생략
+  await refreshAll();
+  DB.lastQuoteAt=Date.now(); save();
+}
+setInterval(autoRefresh, 1800000);        // 열려있는 동안 30분마다 확인
+
 /* ──────────────── 초기화 ──────────────── */
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
@@ -843,6 +1042,8 @@ function renderAll(){
   renderStrategy(); renderCalendar(); drawChart(); renderDividend();
 }
 renderAll();
+renderAi();
+autoRefresh();   // 앱을 열면 시세 자동 반영 (1시간 단위)
 
 /* PWA 서비스워커 (https 또는 localhost에서만) */
 if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){

@@ -1,5 +1,5 @@
 /* 재무컨설턴트 PWA 서비스워커 — 오프라인 캐시 */
-const CACHE = 'fin-consultant-v2';
+const CACHE = 'fin-consultant-v3';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-180.png'];
 
 self.addEventListener('install', e => {
